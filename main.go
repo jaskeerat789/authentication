@@ -8,9 +8,11 @@ import (
 	"os/signal"
 	"time"
 
+	jwtmiddleware "github.com/auth0/go-jwt-middleware"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/hashicorp/go-hclog"
+	"github.com/jaskeerat789/controlers"
 )
 
 var port = os.Getenv("PORT")
@@ -20,9 +22,15 @@ func main() {
 	r := mux.NewRouter()
 	handlers.CORS()
 
-	r.Handle("/status").Methods("GET")
-	r.Handle("/products").Methods("GET")
-	r.Handle("/procuts/{slug}/feedback").Methods("POST")
+	pc := controlers.NewProductController()
+	sc := controlers.NewStatusCotroller()
+	jwtMiddleware := jwtmiddleware.New(jwtmiddleware.Options{
+		ValidationKeyGetter: controlers.JwtMiddlewareHandler,
+	})
+
+	r.Handle("/status", jwtMiddleware.Handler(http.HandlerFunc(sc.GetStatus))).Methods("GET")
+	r.Handle("/products", jwtMiddleware.Handler(http.HandlerFunc(pc.GetProduct))).Methods("GET")
+	r.Handle("/products/{slug}/feedback", jwtMiddleware.Handler(http.HandlerFunc(pc.GetProductBySlug))).Methods("POST")
 
 	s := &http.Server{
 		Addr:         ":" + port,
